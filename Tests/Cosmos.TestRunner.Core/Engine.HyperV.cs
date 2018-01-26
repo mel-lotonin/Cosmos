@@ -5,11 +5,13 @@ using Cosmos.Build.Common;
 using Cosmos.Debug.DebugConnectors;
 using Cosmos.Debug.Hosts;
 
+using Serilog;
+
 namespace Cosmos.TestRunner.Core
 {
     partial class Engine
     {
-        private void RunIsoInHyperV(string iso, string harddisk)
+        private void RunIsoInHyperV(string iso, string harddisk, ILogger logger)
         {
             if (!File.Exists(harddisk))
             {
@@ -22,7 +24,7 @@ namespace Cosmos.TestRunner.Core
             xParams.Add(BuildPropertyNames.VisualStudioDebugPortString, "Pipe: CosmosSerial");
 
             var xDebugConnector = new DebugConnectorPipeClient(DebugConnectorPipeClient.DefaultCosmosPipeName);
-            InitializeDebugConnector(xDebugConnector);
+            InitializeDebugConnector(xDebugConnector, logger);
 
             var xHyperV = new HyperV(xParams, RunWithGDB, harddisk);
             xHyperV.OnShutDown = (a, b) =>

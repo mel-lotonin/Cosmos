@@ -1,6 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
+
+using Serilog;
 
 using Cosmos.Build.Common;
 using Cosmos.Debug.DebugConnectors;
@@ -10,7 +11,7 @@ namespace Cosmos.TestRunner.Core
 {
     partial class Engine
     {
-        private void RunIsoInVMware(string iso, string harddisk)
+        private void RunIsoInVMware(string iso, string harddisk, ILogger logger)
         {
             if (!File.Exists(harddisk))
             {
@@ -24,7 +25,7 @@ namespace Cosmos.TestRunner.Core
             xParams.Add(BuildPropertyNames.VMwareEditionString, "Workstation");
 
             var xDebugConnector = new DebugConnectorPipeServer(DebugConnectorPipeServer.DefaultCosmosPipeName);
-            InitializeDebugConnector(xDebugConnector);
+            InitializeDebugConnector(xDebugConnector, logger);
 
             var xVMware = new VMware(xParams, RunWithGDB, harddisk);
             xVMware.OnShutDown = (a, b) =>

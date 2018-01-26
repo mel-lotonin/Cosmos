@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 
+using Serilog;
+
 using Cosmos.Build.Common;
 using Cosmos.IL2CPU;
 
@@ -28,14 +30,8 @@ namespace Cosmos.TestRunner.Core
             return string.Empty;
         }
 
-        private void RunDotnetPublish(string aProjectPath, string aOutputPath, string aRuntimeTarget)
-        {
-            var xArgsString = $"publish \"{aProjectPath}\" -o \"{aOutputPath}\" -r {aRuntimeTarget}";
-
-            RunProcess("dotnet", aProjectPath, xArgsString);
-        }
-
-        private void RunProcess(string aProcess, string aWorkingDirectory, List<string> aArguments, bool aAttachDebugger = false)
+        private void RunProcess(string aProcess, string aWorkingDirectory, List<string> aArguments, ILogger aLogger,
+            bool aAttachDebugger = false)
         {
             if (string.IsNullOrWhiteSpace(aProcess))
             {
@@ -44,10 +40,11 @@ namespace Cosmos.TestRunner.Core
 
             var xArgsString = aArguments.Aggregate("", (aArgs, aArg) => $"{aArgs} \"{aArg}\"");
 
-            RunProcess(aProcess, aWorkingDirectory, xArgsString, aAttachDebugger);
+            RunProcess(aProcess, aWorkingDirectory, xArgsString, aLogger, aAttachDebugger);
         }
 
-        private void RunProcess(string aProcess, string aWorkingDirectory, string aArguments, bool aAttachDebugger = false)
+        private void RunProcess(string aProcess, string aWorkingDirectory, string aArguments, ILogger aLogger,
+            bool aAttachDebugger = false)
         {
             if (string.IsNullOrWhiteSpace(aProcess))
             {
@@ -59,8 +56,8 @@ namespace Cosmos.TestRunner.Core
                 aArguments += " \"AttachVsDebugger:True\"";
             }
 
-            Action<string> xErrorReceived = OutputHandler.LogError;
-            Action<string> xOutputReceived = OutputHandler.LogMessage;
+            Action<string> xErrorReceived = e => aLogger.Error(e);
+            Action<string> xOutputReceived = o => aLogger.Information(o);
 
             bool xResult = false;
 
@@ -158,12 +155,12 @@ namespace Cosmos.TestRunner.Core
             return xMapFile;
         }
 
-        private void RunExtractMapFromElfFile(string workingDir, string kernelFileName)
+        private void RunExtractMapFromElfFile(string workingDir, string kernelFileName, ILogger logger)
         {
-            RunObjDump(CosmosPaths.Build, workingDir, kernelFileName, OutputHandler.LogError, OutputHandler.LogMessage);
+            RunObjDump(CosmosPaths.Build, workingDir, kernelFileName, o => logger.Information(o), e => logger.Error(e));
         }
 
-        private void RunTheRingMaster(string kernelFileName)
+        private void RunTheRingMaster(string kernelFileName, ILogger logger)
         {
             var xArgs =  new List<string>() { kernelFileName };
 
@@ -177,17 +174,17 @@ namespace Cosmos.TestRunner.Core
 
             if (xUsingUserKit)
             {
-                RunProcess("TheRingMaster.exe", xTheRingMasterPath, xArgs);
+                RunProcess("TheRingMaster.exe", xTheRingMasterPath, xArgs, logger);
             }
             else
             {
                 xArgs.Insert(0, "run");
                 xArgs.Insert(1, "--no-build");
-                RunProcess("dotnet", xTheRingMasterPath, xArgs);
+                RunProcess("dotnet", xTheRingMasterPath, xArgs, logger);
             }
         }
 
-        private void RunIL2CPU(string kernelFileName, string outputFile)
+        private void RunIL2CPU(string kernelFileName, string outputFile, ILogger logger)
         {
             var xReferences = new List<string>() { kernelFileName };
 
@@ -232,7 +229,7 @@ namespace Cosmos.TestRunner.Core
 
             if (xUsingUserkit)
             {
-                RunProcess("IL2CPU.exe", xIL2CPUPath, xArgs, DebugIL2CPU);
+                RunProcess("IL2CPU.exe", xIL2CPUPath, xArgs, logger, DebugIL2CPU);
             }
             else
             {
@@ -246,19 +243,19 @@ namespace Cosmos.TestRunner.Core
                     // ensure we're using the referenced (= solution) version
                     Cosmos.IL2CPU.CosmosAssembler.ReadDebugStubFromDisk = false;
 
-                    Program.Run(xArgs.ToArray(), OutputHandler.LogMessage, OutputHandler.LogError);
+                    Program.Run(xArgs.ToArray(), o => logger.Information(o), e => logger.Error(e));
                 }
                 else
                 {
                     xArgs.Insert(0, "run");
                     xArgs.Insert(1, "--no-build");
                     xArgs.Insert(2, " -- ");
-                    RunProcess("dotnet", xIL2CPUPath, xArgs);
+                    RunProcess("dotnet", xIL2CPUPath, xArgs, logger);
                 }
             }
         }
 
-        private void RunNasm(string inputFile, string outputFile, bool isElf)
+        private void RunNasm(string inputFile, string outputFile, bool isElf, ILogger logger)
         {
             bool xUsingUserkit = false;
             string xNasmPath = Path.Combine(FindCosmosRoot(), "Tools", "NASM");
@@ -282,13 +279,13 @@ namespace Cosmos.TestRunner.Core
 
             if (xUsingUserkit)
             {
-                RunProcess("NASM.exe", xNasmPath, xArgs);
+                RunProcess("NASM.exe", xNasmPath, xArgs, logger);
             }
             else
             {
                 xArgs.Insert(0, "run");
                 xArgs.Insert(1, " -- ");
-                RunProcess("dotnet", xNasmPath, xArgs);
+                RunProcess("dotnet", xNasmPath, xArgs, logger);
             }
         }
 

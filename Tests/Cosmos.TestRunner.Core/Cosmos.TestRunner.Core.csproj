@@ -14,8 +14,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Win32.Registry" Version="4.4.0" />
-        <PackageReference Include="System.Xml.XmlDocument" Version="4.3.0" />
-        <PackageReference Include="System.Xml.XPath.XmlDocument" Version="4.3.0" />
+        <PackageReference Include="Serilog" Version="2.6.0" />
     </ItemGroup>
 
     <ItemGroup>

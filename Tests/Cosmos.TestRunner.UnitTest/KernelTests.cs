@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
+
 using NUnit.Framework;
 
 using Cosmos.TestRunner.Core;
@@ -22,10 +26,10 @@ namespace Cosmos.TestRunner.UnitTest
             {
                 Directory.SetCurrentDirectory(Path.GetDirectoryName(typeof(KernelTests).Assembly.Location));
 
-                var xEngine = new Engine(new EngineConfiguration(aKernelType));
-                xEngine.OutputHandler = new TestOutputHandler();
+                var xLogger = new LoggerConfiguration().WriteTo.Sink(new LogSink()).CreateLogger();
+                var xEngine = new Engine(new EngineConfiguration(aKernelType), xLogger);
 
-                Assert.IsTrue(xEngine.Execute());
+                Assert.IsTrue(xEngine.Execute().KernelTestResults[0].Result);
             }
             catch (AssertionException)
             {
@@ -38,11 +42,12 @@ namespace Cosmos.TestRunner.UnitTest
             }
         }
 
-        private class TestOutputHandler : OutputHandlerFullTextBase
+        private class LogSink : ILogEventSink
         {
-            protected override void Log(string message)
+            public void Emit(LogEvent logEvent)
             {
-                TestContext.WriteLine(String.Concat(DateTime.Now.ToString("hh:mm:ss.ffffff "), new string(' ', mLogLevel * 2), message));
+                var xMessage = $"{logEvent.Timestamp.ToString("hh:mm:ss.ffffff")} {logEvent.RenderMessage()}";
+                TestContext.WriteLine(xMessage);
             }
         }
     }

@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Threading;
+
+using Serilog;
 
 using Cosmos.Build.Common;
 using Cosmos.Debug.DebugConnectors;
@@ -11,7 +11,7 @@ namespace Cosmos.TestRunner.Core
 {
     partial class Engine
     {
-        private void RunIsoInBochs(string iso, string harddisk, string workingDir)
+        private void RunIsoInBochs(string iso, string harddisk, string workingDir, ILogger logger)
         {
             if (!File.Exists(harddisk))
             {
@@ -26,7 +26,7 @@ namespace Cosmos.TestRunner.Core
             xParams.Add(BuildPropertyNames.EnableBochsDebugString, RunWithGDB.ToString());
             xParams.Add(BuildPropertyNames.StartBochsDebugGui, StartBochsDebugGui.ToString());
             var xDebugConnector = new DebugConnectorPipeServer(DebugConnectorPipeServer.DefaultCosmosPipeName);
-            InitializeDebugConnector(xDebugConnector);
+            InitializeDebugConnector(xDebugConnector, logger);
 
             var xBochs = new Bochs(xParams, RunWithGDB, new FileInfo(xBochsConfig), harddisk);
 
@@ -36,13 +36,10 @@ namespace Cosmos.TestRunner.Core
             };
 
             xBochs.RedirectOutput = false;
-            xBochs.LogError = s => OutputHandler.LogDebugMessage(s);
-            xBochs.LogOutput = s => OutputHandler.LogDebugMessage(s);
+            xBochs.LogError = s => logger.Error(s);
+            xBochs.LogOutput = s => logger.Information(s);
 
             HandleRunning(xDebugConnector, xBochs);
         }
-
-        private volatile bool mKernelRunning = true;
-
     }
 }
