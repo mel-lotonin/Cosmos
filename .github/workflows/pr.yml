@@ -97,7 +97,7 @@ jobs:
     if: ${{ success() }}
     needs: [build]
     runs-on: self-hosted
-    
+
     strategy:
       matrix:
         kernel: [
@@ -118,37 +118,37 @@ jobs:
           "MemoryOperationsTest.Kernel",
           "ProcessorTests.Kernel"
         ]
-    
+
     env:
       USER_KIT_PATH: 'C:\CosmosRun\'
       BochsPath: 'C:\Program Files (x86)\Bochs-2.6.8\Bochs.exe'
 
     steps:
-      - name: Checkout Cosmos
+      - name: Checkout Cosmos (test)
         uses: actions/checkout@v3
         with:
           repository: CosmosOS/Cosmos
           path: Cosmos
 
-      - name: Checkout Common
+      - name: Checkout Common (test)
         uses: actions/checkout@v3
         with:
           repository: CosmosOS/Common
           path: Common
 
-      - name: Checkout IL2CPU
+      - name: Checkout IL2CPU (test)
         uses: actions/checkout@v3
         with:
           repository: CosmosOS/IL2CPU
           path: IL2CPU
 
-      - name: Checkout XSharp
+      - name: Checkout XSharp (test)
         uses: actions/checkout@v3
         with:
           repository: CosmosOS/XSharp
           path: XSharp
 
-      - name: Copy Bochs
+      - name: Copy Bochs (test)
         run: |
           xcopy /Y /S "Cosmos\Resources\Bochs\*.*" "${env:ProgramFiles(x86)}\Bochs-2.6.8\"
 
@@ -157,7 +157,7 @@ jobs:
           CI: "True"
         run: |
           dotnet test "Cosmos\Tests\Cosmos.TestRunner.UnitTest\Cosmos.TestRunner.UnitTest.csproj" --logger "trx;LogFileName=$($env:USER_KIT_PATH)TestResults\${{ matrix.kernel }}-TestResult.trx" --filter "FullyQualifiedName~${{ matrix.kernel }}"
-      
+
       - name: Upload Test Logs
         uses: actions/upload-artifact@v4
         with:
